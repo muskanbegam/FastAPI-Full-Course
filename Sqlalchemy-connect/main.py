@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 
 app = FastAPI()
 DATABASE_URL = "sqlite:///./test.db"
@@ -30,10 +30,35 @@ def get_db():
 
 @app.get("/")
 def home(db:Session = Depends(get_db)):
+    todos = db.query(Todo).all()
     return{
         "message":"db Connected",
-        "database": db
+        "total": len(todos),
+        "data" : todos
+
+
     }
+@app.post("/todos")
+def create_db(todo:str,db:Session = Depends(get_db)):
+    todo = Todo(todo = todo, completed = "False")
+    db.add(todo)
+    db.commit()
+    db.refresh(todo)
+    return {
+        "messgae":"Todo Created",
+        "data": todo
+    }
+
+@app.get("/todos/{todo_id}")
+def todo_id(todo_id:int, db: Session = Depends(get_db)):
+    todo = db.query(Todo).filter(Todo.id == todo_id).first()
+    if not todo:
+        raise HTTPException(status_code=404, detail= "Todo not found")
+    return todo
+
+
+
+
 
 
 
